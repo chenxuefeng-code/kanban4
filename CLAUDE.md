@@ -15,8 +15,12 @@ There is no build step, no package manager, no test suite, and no dev server.
 Invoke-Item index.html   # or just double-click the file
 ```
 
-Changes take effect on browser refresh. Debug in the browser devtools console; there is
-no other tooling to run.
+Changes take effect on browser refresh. Debug in the browser devtools console.
+
+**After any edit to the `<script>` or `<style>` block, run `node tools/csp-hash.js`.**
+The page's Content Security Policy pins both blocks by SHA-256 hash; a stale hash makes
+the browser refuse to run the script (blank board, CSP error in the console). The deploy
+workflow runs `node tools/csp-hash.js --check` and fails on a stale hash.
 
 ## Hard constraints
 
@@ -27,14 +31,18 @@ breaks the brief:
 - **Single file.** All markup, the `<style>` block, and the `<script>` block live in
   `index.html`. Do not split into separate `.css`/`.js` files.
 - **Zero external resources.** No CDN scripts, no web fonts, no image files. Icons are
-  inline SVG or Unicode glyphs; typography is a system font stack. The only outbound URL
-  in the file is the FormSubmit endpoint — a `grep -n "https://" index.html` returning
-  more than one hit means something was added that shouldn't be.
+  inline SVG or Unicode glyphs; typography is a system font stack. The only outbound host
+  is FormSubmit: `grep -n "https://" index.html` should return exactly two hits, the
+  `FORMSUBMIT_ENDPOINT` constant and the CSP's `connect-src https://formsubmit.co`. Any
+  other hit means something was added that shouldn't be.
 - **No persistence of any kind.** No `localStorage`, `sessionStorage`, IndexedDB, or
   cookies. A refresh resetting the board to seed data is intended behaviour and is called
   out in the UI. Do not "fix" this.
-- **No real UOB branding.** Neutral text wordmark and a generic corporate blue palette
+- **No real UOB branding.** Neutral text wordmark and a generic sky-blue palette
   only — no real logo, trademark, or imitation of an official system.
+- **No inline event handlers or `style=""` attributes** anywhere in markup or in HTML
+  strings. The CSP blocks both. Set dynamic styles through the CSSOM (`el.style.x = …`)
+  and attach handlers with `addEventListener`.
 - No `alert()` or native `confirm()` — validation errors render inline under each field,
   and delete confirmation is an inline Yes/No toggle inside the card.
 - No `!important` in CSS.
@@ -43,20 +51,31 @@ breaks the brief:
 
 ### State and rendering
 
-A single `state` object (`index.html:707`) is the source of truth:
+A single `state` object (`index.html:903`) is the source of truth:
 
 ```js
-state = { tasks: [], filters: {…}, ui: {…}, idCounter: 0 }
+state = { tasks: [], filters: {…}, ui: {…}, notify: {…}, idCounter: 0 }
 ```
 
 The rendering contract is strict: **mutate `state`, then call `renderBoard()`**. Nothing
 outside `renderBoard()` / `renderCard()` writes card DOM. `renderBoard()` rebuilds each
 column's `.column-body` innerHTML from scratch, so any per-card interaction state that
-must survive a re-render lives in `state.ui` (`openMoveMenuFor`, `confirmDeleteFor`) — not
-in the DOM. `focusCardButton()` restores keyboard focus after the rebuild.
+must survive a re-render lives in `state.ui` (`openMoveMenuFor`, `confirmDeleteFor`,
+`draggingId`) — not in the DOM. `focusCardButton()` restores keyboard focus after the rebuild.
 
 The four column shells (`.column` with `data-status`, `.column-body` with `data-body`) are
-static markup and are never regenerated; drag-and-drop listeners attach to them once.
+static markup and are never regenerated; drag-and-drop listeners attach to them once. Their
+DOM order is Backlog, Blocked, In Progress, Done in a 2×2 grid, so the attention lanes
+(Backlog on a red background, Blocked on amber) sit on top. That is layout only:
+`STATUSES` keeps its domain order.
+
+Inside a lane, `renderLane()` sorts by due date (soonest first; Done shows latest first)
+and groups cards under Overdue / Due in the next 14 days / Due later headings
+(`deadlineBand()`, `DUE_SOON_DAYS`).
+
+`renderProgress()` draws the header's delivery-progress chart (overall stacked bar,
+per-project bars sorted least-complete first, and a table view) with DOM APIs, not
+HTML strings.
 
 ### Function layout
 
@@ -65,8 +84,8 @@ The script is organised into commented sections in this order: config → consta
 validation → event wiring → init. Keep new code in the matching section.
 
 Mutations are `addTask()`, `moveTask()`, `deleteTask()` — each edits the array and
-re-renders. `applyFilters()` is pure and returns the visible subset; the header summary
-counts are computed from the *full* `state.tasks`, not the filtered view.
+re-renders. `applyFilters()` is pure and returns the visible subset; the header progress
+chart is computed from the *full* `state.tasks`, not the filtered view.
 
 ### Event handling
 
@@ -77,30 +96,59 @@ card control means adding a `data-action` case there, not an inline handler.
 Drag-and-drop uses the native HTML5 API: delegated `dragstart`/`dragend` on the board,
 plus per-column `dragover`/`dragleave`/`drop`. Every drag interaction has a
 keyboard-accessible equivalent via the `Move ▸` button — keep that parity when touching
-either path.
+either path. A drop is accepted only when `state.ui.draggingId` was set by a `dragstart` on
+one of the board's own cards; data dragged in from other pages is ignored.
 
-### Escaping
+### Escaping, Trusted Types and input hygiene
 
-`escapeHtml()` (`index.html:719`) must wrap every user-supplied value interpolated into a
+`escapeHtml()` (`index.html:916`) must wrap every user-supplied value interpolated into a
 template string. `renderCard()` builds HTML by concatenation, so an unescaped field is a
 live XSS hole.
 
+The CSP enforces Trusted Types: assigning a plain string to `innerHTML` throws. The only
+HTML sink is `setHTML()` (`index.html:934`), which goes through the `kanban-html` policy.
+Route any new HTML rendering through it, and prefer `textContent` / `make()` where no markup
+is needed.
+
+`validateForm()` runs free text through `cleanText()` (strips control, zero-width and
+bidi-override characters), checks project/category/priority/status against the frozen
+allowlists, applies `LIMITS`, and restricts assignee names to `ASSIGNEE_PATTERN`.
+
+### Content Security Policy
+
+GitHub Pages cannot send headers, so the policy is a `<meta http-equiv>` tag at the top of
+`<head>`: `default-src 'none'`, hash-pinned `script-src`/`style-src`,
+`connect-src https://formsubmit.co`, `form-action 'none'`, `base-uri 'none'`, Trusted Types.
+`tools/csp-hash.js` recomputes the hashes, so keep exactly one inline `<script>` and one
+`<style>` block, and never write those literal tags elsewhere in the file (comments
+included). A meta CSP cannot set `frame-ancestors`, so `init()` refuses to run inside a
+frame (`isFramed()`).
+
 ### FormSubmit integration
 
-`FORMSUBMIT_ENDPOINT` (`index.html:695`) is the single place the notification email address
-appears; it ships with a placeholder. FormSubmit requires a one-time activation — the first
+`FORMSUBMIT_ENDPOINT` (`index.html:860`) is the single place the notification email address
+appears; it ships with a placeholder, and while the placeholder is set no request is sent. FormSubmit requires a one-time activation — the first
 submission triggers a confirmation email and nothing delivers until its link is clicked.
 
 The call is fire-and-forget and **must never break the board**: `wireForm()` adds the card
 optimistically, then calls `notifyNewTask()` in parallel with a `.catch()` that only raises
 a warning toast. Never make card creation await the network. Never send the email address
-anywhere but this endpoint.
+anywhere but this endpoint. `notifySkipReason()` rate-limits emails (`NOTIFY_COOLDOWN_MS`,
+`NOTIFY_MAX_PER_SESSION`), and the request omits credentials, refuses redirects and times
+out after `NOTIFY_TIMEOUT_MS`.
+
+### Deployment
+
+`.github/workflows/deploy.yml` publishes only `index.html` (and `.nojekyll`) to Pages.
+Nothing else in the repo is public. Actions are pinned to commit SHAs.
 
 ## Domain vocabulary
 
 Statuses are fixed and ordered: `Backlog`, `In Progress`, `Blocked`, `Done` (`STATUSES`).
 Priorities: `Critical`, `High`, `Medium`, `Low` (`PRIORITIES`), colour-coded on the card's
 left border and always accompanied by a text pill — colour is never the only signal.
+Status colours (`--st-*`) are shared by lane edges, chart segments and the legend; they were
+validated together for colour-vision deficiency, so change them as a set.
 
 Task IDs are `UOB-ITPM-####` from a zero-padded counter starting at 1000; the eight seeded
 demo tasks take 1001–1008.
