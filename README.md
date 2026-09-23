@@ -44,6 +44,11 @@ Changes take effect on browser refresh. Debug in the browser devtools console.
 - An **IT Support prompt**: after 10 seconds on the page, a modal dialog thanks the visitor
   and gives the IT Support hotline (8765 4321, a `tel:` link). It appears once per page
   load and closes with its button or Escape.
+- A floating **WhatsApp chat button** (bottom right). It opens a dialog of suggested IT
+  Support questions (locked account, VPN, software install, slow laptop, phishing report,
+  access request); picking one opens a WhatsApp chat with +65 1234 5678 in a new tab with
+  the question already typed. The number and questions are the `WHATSAPP_NUMBER` and
+  `CHAT_QUERIES` constants.
 
 ## Intentional behaviour
 
@@ -74,7 +79,7 @@ The page is static, but it still takes untrusted input and talks to one third pa
 it is hardened in layers:
 
 - **Content Security Policy** (meta tag): nothing loads or connects anywhere except
-  FormSubmit; inline script and styles are pinned by SHA-256 hash; forms cannot post
+  FormSubmit (the WhatsApp chat is a plain link the visitor chooses to follow); inline script and styles are pinned by SHA-256 hash; forms cannot post
   anywhere; `<base>` and plugins are blocked.
 - **Trusted Types**: raw strings cannot be assigned to `innerHTML`; all HTML goes through
   one policy after `escapeHtml()`.
