@@ -11,7 +11,7 @@
   (see CLAUDE.md, "Content Security Policy"). No inline event handlers and no
   style="" attributes are allowed anywhere in the markup.
 -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-negIaLxWUxNw1twU8uMMW+2g85iUYljeNmmKwMYxAFY='; style-src 'sha256-kNZNf9pB2wt2vNYMJXHoukFpqf9CMP4z3MiMkKVdEOo='; connect-src https://formsubmit.co; img-src data:; base-uri 'none'; form-action 'none'; object-src 'none'; require-trusted-types-for 'script'; trusted-types kanban-html; upgrade-insecure-requests" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-aROOjpKwM/WmgSm/nuZf9Ydl+odGGpBGw+qJukXpkRU='; style-src 'sha256-icZVlzEf0NPU5VzPWgoGNZaZLk4nHRtDmQvYr96MaPA='; connect-src https://formsubmit.co; img-src data:; base-uri 'none'; form-action 'none'; object-src 'none'; require-trusted-types-for 'script'; trusted-types kanban-html; upgrade-insecure-requests" />
 <meta name="referrer" content="strict-origin" />
 <link rel="icon" href="data:," />
 <title>UOB IT PMO — Project Kanban</title>
@@ -643,6 +643,65 @@ footer.app-footer {
 .chat-queries a.chat-open { color: #0b7a4b; font-weight: 700; }
 .chat-dialog .dialog-actions .btn { background: var(--surface); color: var(--ink); border-color: var(--line); }
 
+/* PMO sign-in + email agent drafts */
+.header-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2); }
+.session-user { font-size: 13px; color: var(--ink-on-sky); }
+.session-user b { color: var(--ink); }
+.field-hint { display: block; margin-top: 2px; font-size: 12px; color: var(--ink-soft); }
+.contacts { margin: 0 0 var(--s-3); padding: var(--s-3) var(--s-3) 0; border: 1px solid var(--line); border-radius: var(--r-md); }
+.contacts legend { padding: 0 var(--s-1); font-size: 13px; font-weight: 700; color: var(--ink-soft); }
+.signin-dialog { width: calc(100vw - 32px); }
+.dialog-actions { gap: var(--s-2); }
+.agent-dialog { max-width: 760px; width: calc(100vw - 32px); max-height: calc(100vh - 32px); }
+.drafts { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s-3); }
+.draft {
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--st-backlog);
+  border-radius: var(--r-md);
+  padding: var(--s-3) var(--s-4);
+}
+.draft.kind-blocked { border-left-color: var(--st-blocked); }
+.draft.is-sent { background: var(--sky-050); }
+.draft-kind {
+  margin: 0 0 var(--s-1);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.draft-head { display: grid; grid-template-columns: auto 1fr; gap: 2px var(--s-3); margin: 0 0 var(--s-2); font-size: 13px; }
+.draft-head dt { color: var(--ink-soft); }
+.draft-head dd { margin: 0; overflow-wrap: anywhere; }
+.draft-body {
+  margin: 0 0 var(--s-3);
+  padding: var(--s-3);
+  max-height: 240px;
+  overflow: auto;
+  background: var(--sky-050);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  font: inherit;
+  font-size: 13px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.draft-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2); }
+.draft-actions a.btn { display: inline-block; text-decoration: none; }
+.draft-status { font-size: 13px; font-weight: 600; color: var(--ok); }
+.agent-notes { list-style: none; margin: var(--s-4) 0 0; padding: 0; display: grid; gap: var(--s-2); }
+.agent-note {
+  padding: var(--s-3);
+  background: var(--warn-bg);
+  border: 1px solid var(--st-blocked);
+  border-radius: var(--r-md);
+  font-size: 13px;
+}
+.agent-note p { margin: 0 0 var(--s-2); }
+.agent-note form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--s-2); }
+.agent-note .field { margin: 0; flex: 0 1 180px; }
+.agent-note .field .error { min-height: 0; }
+
 /* ============================================================
    10. RESPONSIVE & MOTION PREFERENCES
    ============================================================ */
@@ -678,7 +737,13 @@ footer.app-footer {
       <span class="name">UOB IT PMO</span>
       <span class="sub">Project delivery board, internal demo</span>
     </h1>
-    <button type="button" class="btn btn-ink" id="jumpToForm">+ Add task</button>
+    <div class="header-actions">
+      <span class="session-user" id="sessionUser" hidden></span>
+      <button type="button" class="btn btn-quiet" id="signInBtn" aria-haspopup="dialog" aria-controls="signInDialog">PMO sign in</button>
+      <button type="button" class="btn btn-quiet" id="draftsBtn" aria-haspopup="dialog" aria-controls="agentDialog" hidden>Email drafts</button>
+      <button type="button" class="btn btn-quiet" id="signOutBtn" hidden>Sign out</button>
+      <button type="button" class="btn btn-ink" id="jumpToForm">+ Add task</button>
+    </div>
   </div>
 
   <!-- Progress chart: always computed from the full task list, never the filtered view -->
@@ -804,6 +869,40 @@ footer.app-footer {
         <span class="error" id="err-dueDate"></span>
       </div>
 
+      <fieldset class="contacts">
+        <legend>Contacts for the email agent</legend>
+        <div class="field-row">
+          <div class="field" id="f-appCode">
+            <label for="appCode">App code <span aria-hidden="true">*</span></label>
+            <input type="text" id="appCode" name="appCode" maxlength="10" required autocomplete="off"
+                   spellcheck="false" aria-describedby="hint-appCode err-appCode" />
+            <span class="field-hint" id="hint-appCode">For example CBS</span>
+            <span class="error" id="err-appCode"></span>
+          </div>
+          <div class="field" id="f-blockedBy">
+            <label for="blockedBy">Blocked by (app code)</label>
+            <input type="text" id="blockedBy" name="blockedBy" maxlength="10" autocomplete="off"
+                   spellcheck="false" aria-describedby="hint-blockedBy err-blockedBy" />
+            <span class="field-hint" id="hint-blockedBy">Required when Blocked</span>
+            <span class="error" id="err-blockedBy"></span>
+          </div>
+        </div>
+        <div class="field" id="f-stakeholderEmail">
+          <label for="stakeholderEmail">Stakeholder email</label>
+          <input type="email" id="stakeholderEmail" name="stakeholderEmail" maxlength="254" autocomplete="off"
+                 spellcheck="false" aria-describedby="hint-stakeholderEmail err-stakeholderEmail" />
+          <span class="field-hint" id="hint-stakeholderEmail">Optional. If blank: APPCODE_PROJECTCODE@mycompany.com</span>
+          <span class="error" id="err-stakeholderEmail"></span>
+        </div>
+        <div class="field" id="f-blockerEmail">
+          <label for="blockerEmail">Blocking team email</label>
+          <input type="email" id="blockerEmail" name="blockerEmail" maxlength="254" autocomplete="off"
+                 spellcheck="false" aria-describedby="hint-blockerEmail err-blockerEmail" />
+          <span class="field-hint" id="hint-blockerEmail">Optional. If blank: the blocking app code in the same format</span>
+          <span class="error" id="err-blockerEmail"></span>
+        </div>
+      </fieldset>
+
       <div class="form-foot">
         <button type="submit" class="btn" id="submitBtn">Add task</button>
         <button type="reset" class="btn btn-quiet" id="resetBtn">Clear</button>
@@ -915,6 +1014,36 @@ footer.app-footer {
   </div>
 </dialog>
 
+<!-- PMO sign-in: signing in runs the email agent (wireSignIn) -->
+<dialog class="support-dialog signin-dialog" id="signInDialog" aria-labelledby="signInTitle" aria-describedby="signInBody">
+  <h2 id="signInTitle">PMO sign in</h2>
+  <p id="signInBody">Signing in runs the email agent. It drafts follow-ups to stakeholders for Backlog items and call-outs to the app teams blocking Blocked items. Nothing is sent until you choose Send on a draft.</p>
+  <p class="field-hint">Demo only: there are no accounts or passwords, and you stay signed in until the page is refreshed.</p>
+  <form id="signInForm" novalidate>
+    <div class="field" id="f-pmoName">
+      <label for="pmoName">Your name (signs the emails)</label>
+      <input type="text" id="pmoName" name="pmoName" maxlength="60" required autocomplete="name"
+             aria-describedby="err-pmoName" />
+      <span class="error" id="err-pmoName"></span>
+    </div>
+    <div class="dialog-actions">
+      <button type="button" class="btn btn-quiet" id="signInCancel">Cancel</button>
+      <button type="submit" class="btn">Sign in</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Email agent: drafts to review, each with Send and Close (wireEmailAgent) -->
+<dialog class="support-dialog agent-dialog" id="agentDialog" aria-labelledby="agentTitle" aria-describedby="agentSummary">
+  <h2 id="agentTitle">Email drafts for review</h2>
+  <p id="agentSummary"></p>
+  <ul class="drafts" id="draftList"></ul>
+  <ul class="agent-notes" id="agentNotes" hidden></ul>
+  <div class="dialog-actions">
+    <button type="button" class="btn btn-quiet" id="agentClose">Close</button>
+  </div>
+</dialog>
+
 <!-- Support prompt: opened by wireSupportPrompt() after SUPPORT_PROMPT_DELAY_MS -->
 <dialog class="support-dialog" id="supportDialog" aria-labelledby="supportTitle" aria-describedby="supportBody">
   <h2 id="supportTitle">Thanks for visiting the IT PMO portal</h2>
@@ -940,6 +1069,12 @@ footer.app-footer {
    ============================================================ */
 const FORMSUBMIT_ENDPOINT = "https://formsubmit.co/ajax/YOUR_EMAIL@example.com";
 
+/**
+ * Email agent: when a task has no stakeholder or blocking-team address, the
+ * team address is APPCODE_PROJECTCODE@EMAIL_DOMAIN (e.g. CBS_CBU@mycompany.com).
+ */
+const EMAIL_DOMAIN = "mycompany.com";
+
 /* ============================================================
    CONSTANTS — frozen so nothing can widen an allowlist at runtime
    ============================================================ */
@@ -957,7 +1092,16 @@ const ID_PATTERN = /^UOB-ITPM-\d{4,6}$/;
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const ASSIGNEE_PATTERN = /^[\p{L}\p{M}][\p{L}\p{M} .,'’()-]*$/u;
 
-const LIMITS = Object.freeze({ title: 80, description: 500, assignee: 60, tasks: 200 });
+/** Short project codes used to build team email addresses. */
+const PROJECT_CODES = Object.freeze({
+  "Core Banking Upgrade": "CBU", "Digital Channels": "DCH", "Cybersecurity Uplift": "CSU",
+  "Data & Analytics": "DNA", "Infrastructure & Cloud": "INF", "Vendor Management": "VMO"
+});
+const APP_CODE_PATTERN = /^[A-Z][A-Z0-9]{1,9}$/;
+/* Deliberately narrow: no characters that need escaping in a mailto: address. */
+const EMAIL_PATTERN = /^[A-Za-z0-9._+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$/;
+
+const LIMITS = Object.freeze({ title: 80, description: 500, assignee: 60, email: 254, tasks: 200 });
 
 /** Chart segment order, left to right: progress reads from the left edge. */
 const CHART_ORDER  = Object.freeze(["Done", "In Progress", "Blocked", "Backlog"]);
@@ -977,6 +1121,11 @@ const DUE_GROUPS = Object.freeze([
 const NOTIFY_COOLDOWN_MS     = 15000;
 const NOTIFY_MAX_PER_SESSION = 20;
 const NOTIFY_TIMEOUT_MS      = 10000;
+
+/** Email agent: reply-by windows and how much of a description goes into an email. */
+const BACKLOG_REPLY_DAYS = 5;
+const CALLOUT_REPLY_DAYS = 2;
+const EMAIL_DESC_MAX     = 200;
 
 /** How long a visitor stays before the IT Support prompt appears (once per load). */
 const SUPPORT_PROMPT_DELAY_MS = 10000;
@@ -1001,6 +1150,9 @@ const state = {
   filters: { project: "", assignee: "", priority: "" },
   ui: { openMoveMenuFor: null, confirmDeleteFor: null, draggingId: null, chatUsed: false },
   notify: { lastSentAt: 0, sent: 0 },
+  // PMO sign-in and the email agent's drafts; handled maps a draft key to "sent" or "closed".
+  session: { user: null },
+  agent: { drafts: [], missingBlocker: [], handled: Object.create(null) },
   idCounter: 0
 };
 
@@ -1116,6 +1268,11 @@ function findTask(id) {
   return state.tasks.find(function (t) { return t.id === id; });
 }
 
+/** Team mailbox when the board has no address: APPCODE_PROJECTCODE@EMAIL_DOMAIN. */
+function teamAddress(appCode, project) {
+  return appCode + "_" + PROJECT_CODES[project] + "@" + EMAIL_DOMAIN;
+}
+
 function countByStatus(tasks) {
   const counts = {};
   STATUSES.forEach(function (s) { counts[s] = 0; });
@@ -1132,55 +1289,63 @@ function seedTasks() {
       title: "Migrate FX pricing service to AWS",
       description: "Lift-and-shift the FX pricing microservice to the regional AWS landing zone; dual-run for two weeks.",
       project: "Infrastructure & Cloud", category: "Infrastructure",
-      assignee: "Daniel Lim", priority: "High", dueDate: "2026-10-15", status: "In Progress"
+      assignee: "Daniel Lim", priority: "High", dueDate: "2026-10-15", status: "In Progress",
+      appCode: "FXP"
     },
     {
       title: "Patch CVE-2025-48211 on branch teller VDI",
       description: "Emergency patch cycle across 420 branch teller virtual desktops. Change window approved for weekend.",
       project: "Cybersecurity Uplift", category: "Cybersecurity",
-      assignee: "Priya Nair", priority: "Critical", dueDate: "2026-09-19", status: "In Progress"
+      assignee: "Priya Nair", priority: "Critical", dueDate: "2026-09-19", status: "In Progress",
+      appCode: "VDI"
     },
     {
       title: "UAT sign-off for mobile onboarding release 4.2",
-      description: "Coordinate business UAT sign-off with Retail Digital before the 4.2 production cutover.",
+      description: "Coordinate business UAT sign-off with Retail Digital before the 4.2 production cutover. Paused: the eKYC service rejects ID scans in UAT.",
       project: "Digital Channels", category: "Application Development",
-      assignee: "Rachel Tan", priority: "High", dueDate: "2026-10-02", status: "Blocked"
+      assignee: "Rachel Tan", priority: "High", dueDate: "2026-10-02", status: "Blocked",
+      appCode: "MOB", blockedBy: "EKYC"
     },
     {
       title: "Core banking batch window reduction — phase 2",
       description: "Reduce nightly batch window by 40 minutes via parallelised posting jobs.",
       project: "Core Banking Upgrade", category: "Application Development",
-      assignee: "Wei Ming Koh", priority: "Critical", dueDate: "2026-11-28", status: "Backlog"
+      assignee: "Wei Ming Koh", priority: "Critical", dueDate: "2026-11-28", status: "Backlog",
+      appCode: "CBS", stakeholderEmail: "core.banking.owners@mycompany.com"
     },
     {
       title: "Customer 360 data lineage documentation",
       description: "Document end-to-end lineage for the Customer 360 marts ahead of the regulator's thematic review.",
       project: "Data & Analytics", category: "Data",
-      assignee: "Siti Rahman", priority: "Medium", dueDate: "2026-10-30", status: "Backlog"
+      assignee: "Siti Rahman", priority: "Medium", dueDate: "2026-10-30", status: "Backlog",
+      appCode: "C360"
     },
     {
       title: "Renew managed SOC contract with vendor",
-      description: "Commercial and SLA review for the managed SOC renewal; pending vendor's revised pricing schedule.",
+      description: "Commercial and SLA review for the managed SOC renewal; the procurement platform team has not released the vendor's revised pricing schedule.",
       project: "Vendor Management", category: "Vendor",
-      assignee: "Jonathan Chia", priority: "Medium", dueDate: "2026-09-12", status: "Blocked"
+      assignee: "Jonathan Chia", priority: "Medium", dueDate: "2026-09-12", status: "Blocked",
+      appCode: "SOC", blockedBy: "PROC"
     },
     {
       title: "Decommission legacy statement print server",
       description: "Retire the SVR-PRT-07 statement print host after confirming 90 days of zero traffic.",
       project: "Infrastructure & Cloud", category: "Infrastructure",
-      assignee: "Alvin Goh", priority: "Low", dueDate: "2026-12-11", status: "Backlog"
+      assignee: "Alvin Goh", priority: "Low", dueDate: "2026-12-11", status: "Backlog",
+      appCode: "PRT"
     },
     {
       title: "MAS TRM gap assessment closure report",
       description: "Close out remaining technology risk management gaps and issue the final assessment report.",
       project: "Cybersecurity Uplift", category: "Compliance",
-      assignee: "Michelle Ong", priority: "High", dueDate: "2026-09-05", status: "Done"
+      assignee: "Michelle Ong", priority: "High", dueDate: "2026-09-05", status: "Done",
+      appCode: "GRC"
     }
   ];
 
   state.idCounter = 1000;
   state.tasks = raw.map(function (t) {
-    return Object.assign({ id: nextTaskId() }, t);
+    return Object.assign({ id: nextTaskId(), blockedBy: "", stakeholderEmail: "", blockerEmail: "" }, t);
   });
 }
 
@@ -1270,6 +1435,10 @@ function renderCard(task) {
     '<dl class="card-meta">' +
       '<dt>Project</dt><dd>' + escapeHtml(task.project) + '</dd>' +
       '<dt>Assignee</dt><dd>' + escapeHtml(task.assignee) + '</dd>' +
+      '<dt>App</dt><dd>' + escapeHtml(task.appCode) + '</dd>' +
+      (task.status === "Blocked"
+        ? '<dt>Blocked by</dt><dd>' + escapeHtml(task.blockedBy || "Not recorded") + '</dd>'
+        : '') +
     '</dl>' +
     renderDue(task) +
     '<div class="card-foot">' +
@@ -1396,6 +1565,18 @@ function renderFilterMeta(visibleCount) {
     : state.tasks.length + " tasks on the board";
 }
 
+/** Header sign-in controls reflect state.session. */
+function renderSession() {
+  const user = state.session.user;
+  const label = document.getElementById("sessionUser");
+  label.replaceChildren();
+  if (user) label.append("Signed in as ", make("b", null, user));
+  label.hidden = !user;
+  document.getElementById("signInBtn").hidden = Boolean(user);
+  document.getElementById("draftsBtn").hidden = !user;
+  document.getElementById("signOutBtn").hidden = !user;
+}
+
 /* ============================================================
    MUTATIONS — every one re-renders from state
    ============================================================ */
@@ -1411,6 +1592,14 @@ function moveTask(id, targetStatus) {
   state.ui.openMoveMenuFor = null;
   renderBoard();
   showToast(task.id + " moved to " + targetStatus + ".");
+}
+
+/** Record which app team is blocking a task (set from the email agent). */
+function setBlocker(id, appCode) {
+  const task = findTask(id);
+  if (!task || !APP_CODE_PATTERN.test(appCode)) return;
+  task.blockedBy = appCode;
+  renderBoard();
 }
 
 function deleteTask(id) {
@@ -1500,6 +1689,238 @@ async function notifyNewTask(task) {
 }
 
 /* ============================================================
+   EMAIL AGENT — runs when a PMO user signs in. It only DRAFTS:
+   one follow-up per stakeholder for Backlog items and one call-out
+   per blocking app team for Blocked items. Nothing leaves the page
+   until the user clicks Send, which hands the draft to their own
+   email app as a mailto: link. No network request is made here.
+   ============================================================ */
+
+function stakeholderAddress(task) {
+  return task.stakeholderEmail || teamAddress(task.appCode, task.project);
+}
+
+function blockerAddress(task) {
+  return task.blockerEmail || teamAddress(task.blockedBy, task.project);
+}
+
+/** Deadline for email text, e.g. "2 Oct 2026 (due in 9 days)". */
+function describeDue(task) {
+  const days = daysUntil(task.dueDate);
+  const when = days < 0 ? "overdue by " + plural(-days, "day")
+             : days === 0 ? "due today"
+             : "due in " + plural(days, "day");
+  return formatDate(task.dueDate) + " (" + when + ")";
+}
+
+function clip(text, max) {
+  return text.length > max ? text.slice(0, max - 1).trimEnd() + "…" : text;
+}
+
+/** One task as a short block of plain text in an email body. */
+function emailTaskLines(task) {
+  const lines = [
+    "- " + task.id + ": " + task.title,
+    "  Priority " + task.priority + ", " + describeDue(task) + ", PMO contact " + task.assignee
+  ];
+  if (task.description) {
+    lines.push("  " + clip(task.description.replace(/\s+/g, " "), EMAIL_DESC_MAX));
+  }
+  return lines.join("\n");
+}
+
+/** Group tasks by recipient and project, soonest deadline first within a group. */
+function groupForEmail(tasks, addressOf) {
+  const groups = new Map();
+  sortForLane(tasks, "Backlog").forEach(function (task) {
+    const to = addressOf(task);
+    const key = to + "|" + task.project;
+    if (!groups.has(key)) groups.set(key, { to: to, project: task.project, tasks: [] });
+    groups.get(key).tasks.push(task);
+  });
+  return Array.from(groups.values());
+}
+
+function distinct(tasks, field) {
+  return tasks.map(function (t) { return t[field]; })
+    .filter(function (v, i, all) { return all.indexOf(v) === i; });
+}
+
+function signOff(signer) {
+  return ["", "Regards,", signer, "IT PMO"];
+}
+
+/** Backlog follow-up: ask the stakeholders for a start date and an owner. */
+function backlogDraft(group, signer) {
+  const n = group.tasks.length;
+  return {
+    kind: "backlog",
+    to: group.to,
+    tasks: group.tasks,
+    subject: "[IT PMO] " + group.project + ": " + plural(n, "backlog item") + " awaiting a start date",
+    body: [
+      "Hello " + distinct(group.tasks, "appCode").join(" / ") + " stakeholders,",
+      "",
+      "As part of the IT PMO delivery review, the " + group.project + " " +
+        (n === 1 ? "item below is" : "items below are") + " in the backlog and not yet started:",
+      "",
+      group.tasks.map(emailTaskLines).join("\n\n"),
+      "",
+      "Please confirm by " + formatDate(addDaysISO(BACKLOG_REPLY_DAYS)) + " a planned start date and an owner for " +
+        (n === 1 ? "it" : "each item") + ", or let me know if " + (n === 1 ? "it" : "any") +
+        " should be reprioritised or closed."
+    ].concat(signOff(signer)).join("\n")
+  };
+}
+
+/** Blocked call-out: ask the blocking app team for an owner and a resolution date. */
+function calloutDraft(group, signer) {
+  const n = group.tasks.length;
+  const team = distinct(group.tasks, "blockedBy").join(" / ");
+  const overdue = group.tasks.some(isOverdue);
+  const critical = group.tasks.some(function (t) { return t.priority === "Critical"; });
+  const urgency = overdue ? "This is now urgent: at least one item is past its due date. "
+                : critical ? "This is urgent: a Critical-priority item is affected. "
+                : "";
+  return {
+    kind: "blocked",
+    to: group.to,
+    tasks: group.tasks,
+    subject: "[IT PMO] Action needed: " + group.project + " is blocked on " + team +
+             " (" + plural(n, "item") + ")",
+    body: [
+      "Hello " + team + " team,",
+      "",
+      "The " + group.project + " project is blocked waiting on " + team + ". " +
+        (n === 1 ? "This item" : "These items") + " cannot move until your team acts:",
+      "",
+      group.tasks.map(emailTaskLines).join("\n\n"),
+      "",
+      urgency + "Please reply by " + formatDate(addDaysISO(CALLOUT_REPLY_DAYS)) + " with:",
+      "  1. an owner on your side,",
+      "  2. the expected resolution date, and",
+      "  3. anything you need from the project team.",
+      "",
+      "If this is no longer blocked on " + team + ", let me know and I will update the board."
+    ].concat(signOff(signer)).join("\n")
+  };
+}
+
+/** Draft every email from the full board (not the filtered view). Call-outs first. */
+function runEmailAgent() {
+  const signer = state.session.user;
+  const inStatus = function (status) {
+    return state.tasks.filter(function (t) { return t.status === status; });
+  };
+  const blocked = inStatus("Blocked");
+
+  const drafts = groupForEmail(blocked.filter(function (t) { return t.blockedBy; }), blockerAddress)
+    .map(function (g) { return calloutDraft(g, signer); })
+    .concat(groupForEmail(inStatus("Backlog"), stakeholderAddress)
+      .map(function (g) { return backlogDraft(g, signer); }))
+    .filter(function (d) { return EMAIL_PATTERN.test(d.to); });
+
+  drafts.forEach(function (d) {
+    d.key = d.kind + "|" + d.to + "|" + d.tasks.map(function (t) { return t.id; }).join(",");
+  });
+  state.agent.drafts = drafts;
+  state.agent.missingBlocker = blocked.filter(function (t) { return !t.blockedBy; });
+}
+
+/** Send = open the draft in the user's email app. The address needs no escaping (EMAIL_PATTERN). */
+function mailtoLink(draft) {
+  return "mailto:" + draft.to +
+    "?subject=" + encodeURIComponent(draft.subject) +
+    "&body=" + encodeURIComponent(draft.body.replace(/\n/g, "\r\n"));
+}
+
+function draftByKey(key) {
+  return state.agent.drafts.find(function (d) { return d.key === key; });
+}
+
+/** Rebuild the drafts dialog from state.agent (DOM APIs only, no HTML strings). */
+function renderAgentDialog() {
+  const agent = state.agent;
+  const open = agent.drafts.filter(function (d) { return agent.handled[d.key] !== "closed"; });
+
+  let summary;
+  if (!agent.drafts.length && !agent.missingBlocker.length) {
+    summary = "Nothing to draft: there are no Backlog or Blocked items on the board.";
+  } else if (!open.length && agent.drafts.length) {
+    summary = "You have closed every draft. New drafts appear when the board changes or you sign in again.";
+  } else {
+    summary = plural(open.length, "draft") + " from the board as it is now, signed " + state.session.user +
+      ". Send opens a draft in your email app, addressed and ready to go. Close drops it.";
+  }
+  document.getElementById("agentSummary").textContent = summary;
+
+  const list = document.getElementById("draftList");
+  list.replaceChildren.apply(list, open.map(function (draft) {
+    const sent = agent.handled[draft.key] === "sent";
+    const item = make("li", "draft kind-" + draft.kind + (sent ? " is-sent" : ""));
+    item.appendChild(make("h3", "draft-kind", draft.kind === "blocked" ? "Blocker call-out" : "Backlog follow-up"));
+
+    const head = make("dl", "draft-head");
+    [["To", draft.to], ["Subject", draft.subject],
+     ["Tasks", draft.tasks.map(function (t) { return t.id; }).join(", ")]].forEach(function (pair) {
+      head.appendChild(make("dt", null, pair[0]));
+      head.appendChild(make("dd", null, pair[1]));
+    });
+    item.appendChild(head);
+
+    const body = make("pre", "draft-body", draft.body);
+    body.tabIndex = 0;
+    body.setAttribute("aria-label", "Email body");
+    item.appendChild(body);
+
+    const actions = make("div", "draft-actions");
+    const send = make("a", "btn", sent ? "Send again" : "Send");
+    send.href = mailtoLink(draft);
+    send.setAttribute("data-key", draft.key);
+    send.setAttribute("aria-label", (sent ? "Send again: " : "Send: ") + draft.subject);
+    actions.appendChild(send);
+    const close = make("button", "btn btn-quiet", "Close");
+    close.type = "button";
+    close.setAttribute("data-key", draft.key);
+    close.setAttribute("aria-label", "Close draft: " + draft.subject);
+    actions.appendChild(close);
+    if (sent) actions.appendChild(make("span", "draft-status", "Opened in your email app"));
+    item.appendChild(actions);
+    return item;
+  }));
+
+  const notes = document.getElementById("agentNotes");
+  notes.hidden = !agent.missingBlocker.length;
+  notes.replaceChildren.apply(notes, agent.missingBlocker.map(function (task) {
+    const item = make("li", "agent-note");
+    item.appendChild(make("p", null, task.id + " (" + task.title + ") is Blocked, but no blocking app team " +
+      "is recorded, so no call-out was drafted. Add the app code to draft one."));
+    const form = make("form");
+    form.noValidate = true;
+    form.setAttribute("data-id", task.id);
+    const field = make("div", "field");
+    const inputId = "blk-" + task.id;
+    const label = make("label", null, "Blocking app code");
+    label.htmlFor = inputId;
+    const input = make("input");
+    input.type = "text";
+    input.id = inputId;
+    input.maxLength = 10;
+    input.autocomplete = "off";
+    input.spellcheck = false;
+    input.setAttribute("aria-describedby", inputId + "-err");
+    const error = make("span", "error");
+    error.id = inputId + "-err";
+    field.append(label, input, error);
+    const submit = make("button", "btn", "Draft call-out");
+    submit.type = "submit";
+    form.append(field, submit);
+    item.appendChild(form);
+    return item;
+  }));
+}
+
+/* ============================================================
    FORM VALIDATION — allowlists and length limits on every field
    ============================================================ */
 function setFieldError(fieldId, message) {
@@ -1512,8 +1933,24 @@ function setFieldError(fieldId, message) {
 }
 
 function clearAllErrors() {
-  ["title", "description", "project", "category", "assignee", "priority", "dueDate", "status"]
+  ["title", "description", "project", "category", "assignee", "priority", "dueDate", "status",
+   "appCode", "blockedBy", "stakeholderEmail", "blockerEmail"]
     .forEach(function (id) { setFieldError(id, ""); });
+}
+
+const APP_CODE_MESSAGE = "Use 2 to 10 letters or digits, starting with a letter.";
+
+/** App codes are stored upper-case, e.g. "cbs" becomes "CBS". */
+function readAppCode(inputId) {
+  return cleanText(document.getElementById(inputId).value, false).toUpperCase();
+}
+
+/** Optional email field: "" when blank or valid, otherwise the error to show. */
+function emailProblem(value) {
+  if (!value) return "";
+  if (value.length > LIMITS.email) return "Maximum " + LIMITS.email + " characters.";
+  if (!EMAIL_PATTERN.test(value)) return "Enter an address like name@mycompany.com.";
+  return "";
 }
 
 /** Returns a task object when valid, or null (with inline errors shown). */
@@ -1528,6 +1965,10 @@ function validateForm() {
   const priority = document.getElementById("priority").value;
   const dueDate = document.getElementById("dueDate").value;
   const status = document.getElementById("status").value;
+  const appCode = readAppCode("appCode");
+  const blockedBy = readAppCode("blockedBy");
+  const stakeholderEmail = cleanText(document.getElementById("stakeholderEmail").value, false);
+  const blockerEmail = cleanText(document.getElementById("blockerEmail").value, false);
 
   let firstInvalid = null;
   function fail(id, message) {
@@ -1557,6 +1998,17 @@ function validateForm() {
   else if (!ISO_DATE_PATTERN.test(dueDate) || dueDate > "2099-12-31") fail("dueDate", "Enter a valid date.");
   else if (dueDate < todayISO()) fail("dueDate", "Due date cannot be in the past.");
 
+  if (!appCode) fail("appCode", "App code is required.");
+  else if (!APP_CODE_PATTERN.test(appCode)) fail("appCode", APP_CODE_MESSAGE);
+
+  if (blockedBy && !APP_CODE_PATTERN.test(blockedBy)) fail("blockedBy", APP_CODE_MESSAGE);
+  else if (status === "Blocked" && !blockedBy) fail("blockedBy", "Required when the status is Blocked.");
+
+  [["stakeholderEmail", stakeholderEmail], ["blockerEmail", blockerEmail]].forEach(function (pair) {
+    const message = emailProblem(pair[1]);
+    if (message) fail(pair[0], message);
+  });
+
   if (firstInvalid) {
     const el = document.getElementById(firstInvalid);
     if (el) el.focus();
@@ -1572,7 +2024,11 @@ function validateForm() {
     assignee: assignee,
     priority: priority,
     dueDate: dueDate,
-    status: status
+    status: status,
+    appCode: appCode,
+    blockedBy: blockedBy,
+    stakeholderEmail: stakeholderEmail,
+    blockerEmail: blockerEmail
   };
 }
 
@@ -1841,6 +2297,129 @@ function wireChatWidget() {
   dialog.addEventListener("close", function () { fab.focus(); });
 }
 
+/** Run the email agent on the current board and show its drafts. */
+function openAgentDialog() {
+  runEmailAgent();
+  renderAgentDialog();
+  const prompt = document.getElementById("supportDialog");
+  if (prompt.open) prompt.close();
+  const dialog = document.getElementById("agentDialog");
+  if (!dialog.open) dialog.showModal();
+  const firstSend = document.querySelector("#draftList a[data-key]");
+  (firstSend || document.getElementById("agentClose")).focus();
+}
+
+/** PMO sign-in: a name only (demo, no accounts). Signing in runs the email agent. */
+function wireSignIn() {
+  const dialog = document.getElementById("signInDialog");
+  const signInBtn = document.getElementById("signInBtn");
+  const form = document.getElementById("signInForm");
+  if (typeof dialog.showModal !== "function") { signInBtn.hidden = true; return; }
+
+  signInBtn.addEventListener("click", function () {
+    form.reset();
+    setFieldError("pmoName", "");
+    dialog.showModal();
+  });
+  document.getElementById("signInCancel").addEventListener("click", function () {
+    dialog.close();
+  });
+  dialog.addEventListener("close", function () {
+    if (!state.session.user) signInBtn.focus();
+  });
+
+  form.addEventListener("submit", function (event) {
+    event.preventDefault();
+    const name = cleanText(document.getElementById("pmoName").value, false).replace(/\s+/g, " ");
+    let problem = "";
+    if (!name) problem = "Enter your name.";
+    else if (name.length > LIMITS.assignee) problem = "Maximum " + LIMITS.assignee + " characters.";
+    else if (!ASSIGNEE_PATTERN.test(name)) problem = "Use letters, spaces and . , ' ( ) - only.";
+    setFieldError("pmoName", problem);
+    if (problem) { document.getElementById("pmoName").focus(); return; }
+
+    state.session.user = name;
+    state.agent.handled = Object.create(null);
+    dialog.close();
+    renderSession();
+    openAgentDialog();
+    showToast("Signed in as " + name + ". The email agent drafted " +
+              plural(state.agent.drafts.length, "email") + " for review.");
+  });
+
+  document.getElementById("signOutBtn").addEventListener("click", function () {
+    state.session.user = null;
+    state.agent = { drafts: [], missingBlocker: [], handled: Object.create(null) };
+    renderSession();
+    signInBtn.focus();
+    showToast("Signed out.");
+  });
+}
+
+/** Drafts dialog: Send (mailto) or Close each draft; record a missing blocker. */
+function wireEmailAgent() {
+  const dialog = document.getElementById("agentDialog");
+  const list = document.getElementById("draftList");
+  if (typeof dialog.showModal !== "function") return;
+
+  document.getElementById("draftsBtn").addEventListener("click", openAgentDialog);
+  document.getElementById("agentClose").addEventListener("click", function () { dialog.close(); });
+  dialog.addEventListener("close", function () {
+    if (state.session.user) document.getElementById("draftsBtn").focus();
+  });
+
+  function focusDraft(key, selector) {
+    const target = key && list.querySelector(selector + '[data-key="' + CSS.escape(key) + '"]');
+    (target || list.querySelector("a[data-key]") || document.getElementById("agentClose")).focus();
+  }
+
+  list.addEventListener("click", function (event) {
+    const control = event.target.closest("[data-key]");
+    if (!control) return;
+    const draft = draftByKey(control.getAttribute("data-key"));
+    if (!draft) return;
+
+    if (control.tagName === "A") {
+      // Let the mailto: navigation happen first, then mark the draft as sent.
+      window.setTimeout(function () {
+        state.agent.handled[draft.key] = "sent";
+        renderAgentDialog();
+        focusDraft(draft.key, "a");
+        showToast("Opened the email to " + draft.to + " in your email app.");
+      }, 0);
+      return;
+    }
+    const index = Array.prototype.indexOf.call(list.children, control.closest("li"));
+    state.agent.handled[draft.key] = "closed";
+    renderAgentDialog();
+    const next = list.children[Math.min(index, list.children.length - 1)];
+    focusDraft(next ? next.querySelector("a[data-key]").getAttribute("data-key") : null, "a");
+  });
+
+  document.getElementById("agentNotes").addEventListener("submit", function (event) {
+    event.preventDefault();
+    const form = event.target;
+    const id = form.getAttribute("data-id");
+    const input = form.querySelector("input");
+    const error = form.querySelector(".error");
+    const code = cleanText(input.value, false).toUpperCase();
+    const problem = !code ? "Enter the app code of the blocking team."
+                  : !APP_CODE_PATTERN.test(code) ? APP_CODE_MESSAGE : "";
+    error.textContent = problem;
+    input.setAttribute("aria-invalid", problem ? "true" : "false");
+    if (problem || !ID_PATTERN.test(id)) { input.focus(); return; }
+
+    setBlocker(id, code);
+    runEmailAgent();
+    renderAgentDialog();
+    const draft = state.agent.drafts.find(function (d) {
+      return d.tasks.some(function (t) { return t.id === id; });
+    });
+    focusDraft(draft && draft.key, "a");
+    showToast(id + " is now marked as blocked by " + code + ". Call-out drafted.");
+  });
+}
+
 /* ============================================================
    INIT
    ============================================================ */
@@ -1875,6 +2454,9 @@ function init() {
   wireChartTooltip();
   wireSupportPrompt();
   wireChatWidget();
+  wireSignIn();
+  wireEmailAgent();
+  renderSession();
 
   const progress = document.getElementById("progress");
   progress.classList.add("is-intro");

@@ -56,7 +56,7 @@ breaks the brief:
 A single `state` object (`index.html:903`) is the source of truth:
 
 ```js
-state = { tasks: [], filters: {…}, ui: {…}, notify: {…}, idCounter: 0 }
+state = { tasks: [], filters: {…}, ui: {…}, notify: {…}, session: {…}, agent: {…}, idCounter: 0 }
 ```
 
 The rendering contract is strict: **mutate `state`, then call `renderBoard()`**. Nothing
@@ -83,9 +83,9 @@ HTML strings.
 
 The script is organised into commented sections in this order: config → constants → state
 → helpers → seed data → filtering → rendering → mutations → toasts → FormSubmit →
-validation → event wiring → init. Keep new code in the matching section.
+email agent → validation → event wiring → init. Keep new code in the matching section.
 
-Mutations are `addTask()`, `moveTask()`, `deleteTask()` — each edits the array and
+Mutations are `addTask()`, `moveTask()`, `setBlocker()`, `deleteTask()` — each edits the array and
 re-renders. `applyFilters()` is pure and returns the visible subset; the header progress
 chart is computed from the *full* `state.tasks`, not the filtered view.
 
@@ -152,6 +152,26 @@ next to the toast region:
   `WHATSAPP_NUMBER` with the query as `?text=` (built with `encodeURIComponent`, rendered
   with `make()`, opened with `target="_blank" rel="noopener noreferrer"`). Change the
   number or queries only in those constants.
+
+### PMO sign-in and the email agent
+
+`wireSignIn()` opens `#signInDialog`; the sign-in is a name only (`state.session.user`,
+memory only, no password — a static page cannot authenticate, so do not fake a password
+check). Signing in calls `openAgentDialog()`, which runs `runEmailAgent()` over the full
+`state.tasks` and renders `#agentDialog` with `renderAgentDialog()` (DOM APIs only).
+
+- Backlog tasks → `backlogDraft()` to `stakeholderAddress()`; Blocked tasks with a
+  `blockedBy` app code → `calloutDraft()` to `blockerAddress()`. Drafts group by
+  recipient + project; call-outs come first.
+- An explicit `stakeholderEmail` / `blockerEmail` on the task wins; otherwise
+  `teamAddress()` builds `APPCODE_PROJECTCODE@EMAIL_DOMAIN` from `PROJECT_CODES`.
+- Blocked tasks without `blockedBy` (e.g. dragged there) are listed in `#agentNotes` with
+  a field that calls `setBlocker()`.
+- **Send is a `mailto:` link**, never a network request. Do not route these emails through
+  FormSubmit or any other service. `EMAIL_PATTERN` is deliberately narrow so addresses
+  need no escaping in the link; subject and body go through `encodeURIComponent`.
+- `state.agent.handled` (keyed by `draft.key`) records Send/Close so closed drafts stay
+  closed until the board changes or the user signs in again.
 
 ### Deployment
 
