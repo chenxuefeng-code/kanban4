@@ -41,12 +41,18 @@ Changes take effect on browser refresh. Debug in the browser devtools console.
 - Four priority levels colour-coded on the card's left border, always paired with a text
   pill — colour is never the only signal.
 - Optional email notification on task creation via a FormSubmit endpoint.
+- An **IT Support prompt**: after 10 seconds on the page, a modal dialog thanks the visitor
+  and gives the IT Support hotline (8765 4321, a `tel:` link). It appears once per page
+  load and closes with its button or Escape.
 
 ## Intentional behaviour
 
 **The board holds no persistent state.** There is no `localStorage`, no backend and no
 database — refreshing the page resets it to the eight seeded demo tasks. This is
 deliberate for a training artefact and is called out in the UI; it is not a bug.
+
+The IT Support prompt is also stateless: because nothing is stored, it reappears after
+every refresh. The delay is `SUPPORT_PROMPT_DELAY_MS` in the script's constants.
 
 ## Email notifications (optional, off by default)
 
