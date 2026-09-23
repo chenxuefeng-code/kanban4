@@ -6,7 +6,7 @@ markup, styles and behaviour — is one file: `index.html`.
 
 **Live demo:** https://chenxuefeng-code.github.io/kanban4/
 
-![The board in a browser: a sky-blue header with a delivery progress chart (an overall stacked status bar and one bar per project), the Add Task form on the left, and the Backlog lane in red and Blocked lane in amber on the top row, with cards grouped by deadline. A green "Chat with IT Support" WhatsApp button floats at the bottom right.](docs/screenshot.png)
+![The board in a browser: a sky-blue header with "PMO sign in" and "Add task" buttons above a delivery progress chart (an overall stacked status bar and one bar per project), the Add Task form on the left with a "Contacts for the email agent" section, and the Backlog lane in red and Blocked lane in amber on the top row. Cards are grouped by deadline and show each task's app code, plus the blocking app team on Blocked cards. A green "Chat with IT Support" WhatsApp button floats at the bottom right.](docs/screenshot.png)
 
 > This is a demo/training tool, not a product and not an official system. It is not
 > affiliated with, endorsed by, or representative of any real company or bank, and all
@@ -49,6 +49,29 @@ Changes take effect on browser refresh. Debug in the browser devtools console.
   access request); picking one opens a WhatsApp chat with +65 9876 5432 in a new tab with
   the question already typed. The number and questions are the `WHATSAPP_NUMBER` and
   `CHAT_QUERIES` constants.
+- A **PMO sign-in** that runs the **email agent**. It drafts one follow-up per stakeholder
+  for Backlog items (asking for a start date and an owner) and one call-out per blocking
+  app team for Blocked items (asking for an owner and a resolution date, flagged urgent
+  when an item is overdue or Critical). Each draft is shown with **Send** and **Close**.
+
+## Email agent
+
+![The "Email drafts for review" dialog after signing in as Alex Tan: a summary line saying 5 drafts were made, then a "Blocker call-out" draft addressed to PROC_VMO@mycompany.com with the subject "[IT PMO] Action needed: Vendor Management is blocked on PROC (1 item)", its plain-text body, and Send and Close buttons, followed by a second call-out to EKYC_DCH@mycompany.com.](docs/email-agent.png)
+
+Each task carries an **app code**. Blocked tasks also carry the app code of the team
+**blocking** them, and either can have an explicit email address. When the board has no
+address, the agent uses `APPCODE_PROJECTCODE@mycompany.com`, for example `C360_DNA@mycompany.com`
+for the Customer 360 app on Data & Analytics. Project codes are the `PROJECT_CODES`
+constant and the domain is `EMAIL_DOMAIN`.
+
+Drafts are grouped by recipient and project and built from the whole board, not the
+filtered view. A card dragged to Blocked has no blocking team yet, so the agent lists it
+with a field to record one and then drafts its call-out.
+
+**Send opens the draft in your own email app** (a `mailto:` link), addressed and ready to
+send. The page never sends these emails itself: a static page has no mail server, and the
+FormSubmit endpoint only delivers to its one fixed inbox. Sign-in is a name only (it signs
+the emails); there are no accounts or passwords, and it lasts until the page is refreshed.
 
 ## Intentional behaviour
 
