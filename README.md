@@ -46,7 +46,7 @@ Changes take effect on browser refresh. Debug in the browser devtools console.
   load and closes with its button or Escape.
 - A floating **WhatsApp chat button** (bottom right). It opens a dialog of suggested IT
   Support questions (locked account, VPN, software install, slow laptop, phishing report,
-  access request); picking one opens a WhatsApp chat with +65 1234 5678 in a new tab with
+  access request); picking one opens a WhatsApp chat with +65 9876 5432 in a new tab with
   the question already typed. The number and questions are the `WHATSAPP_NUMBER` and
   `CHAT_QUERIES` constants.
 
