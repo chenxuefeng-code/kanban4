@@ -6,7 +6,7 @@ markup, styles and behaviour — is one file: `index.html`.
 
 **Live demo:** https://chenxuefeng-code.github.io/kanban4/
 
-![The board in a browser: a sky-blue header with a delivery progress chart (an overall stacked status bar and one bar per project), the Add Task form on the left, and the Backlog lane in red and Blocked lane in amber on the top row, with cards grouped by deadline.](docs/screenshot.png)
+![The board in a browser: a sky-blue header with a delivery progress chart (an overall stacked status bar and one bar per project), the Add Task form on the left, and the Backlog lane in red and Blocked lane in amber on the top row, with cards grouped by deadline. A green "Chat with IT Support" WhatsApp button floats at the bottom right.](docs/screenshot.png)
 
 > This is a demo/training tool, not a product and not an official system. It is not
 > affiliated with, endorsed by, or representative of any real company or bank, and all
