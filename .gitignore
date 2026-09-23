@@ -7,3 +7,6 @@
 # Locally installed third-party Claude Code skills (not part of this project)
 .claude/skills/
 skills-lock.json
+
+# Security scan reports (describe weaknesses; never publish)
+security-reports/
