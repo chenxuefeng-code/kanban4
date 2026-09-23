@@ -1,7 +1,7 @@
 ---
 description: Security-scan, then publish this project to GitHub with a README, About section, and Pages deployment
 argument-hint: [repo url or owner/name] [extra notes, e.g. "private" or "skip pages"]
-allowed-tools: Bash, Read, Write, Edit, Glob, Grep, Skill
+allowed-tools: Bash, Read, Write, Edit, Glob, Grep, Skill, mcp__playwright__browser_navigate, mcp__playwright__browser_resize, mcp__playwright__browser_take_screenshot, mcp__playwright__browser_snapshot, mcp__playwright__browser_click, mcp__playwright__browser_fill_form, mcp__playwright__browser_console_messages, mcp__playwright__browser_close
 ---
 
 # Publish this project to GitHub
@@ -75,7 +75,8 @@ never describe features that don't exist. Written for someone who lands on the r
 cold. Include:
 
 - Project name and a one-or-two-sentence description of what it actually does.
-- A link to the live GitHub Pages URL (add it once the URL is known in step 4).
+- A link to the live GitHub Pages URL (add it once the URL is known in step 5),
+  followed by the screenshot from step 3.
 - **Running it locally** — follow whatever the project's own docs say (this project has
   no build step; you just open `index.html`).
 - Key features, briefly.
@@ -89,7 +90,32 @@ cold. Include:
 
 Keep it honest and skimmable. No badge spam, no invented screenshots.
 
-## 3. GitHub About section
+## 3. Screenshot for the README
+
+A README for anything with a UI should show it. Capture one with the Playwright MCP
+tools (`mcp__playwright__*`, configured in `.mcp.json`):
+
+- Prefer the **live deployed URL** so the screenshot proves what visitors actually get.
+  If Pages is not up yet, do this step after step 5 and push the image in a follow-up
+  commit, or capture the local file with a `file:///` URL.
+- `browser_navigate` to the URL, `browser_resize` to a desktop viewport (1440x900 works
+  for a wide layout), then `browser_take_screenshot` with `fullPage: true`,
+  `scale: "css"` and `filename: "docs/screenshot.png"`.
+- If the page needs a particular state to look representative — a filter applied, a menu
+  open, a form filled — drive it there with the other Playwright tools first.
+- **Look at the image** with the Read tool before committing it. A blank, half-loaded or
+  error-page screenshot is worse than none.
+- Check `browser_console_messages` while you are there and mention anything real in your
+  report; a missing `favicon.ico` is noise, a thrown exception is not.
+- Reference it from the README under the live-demo link, with **alt text that describes
+  what is in the image** — a screenshot with no alt text is invisible to screen readers
+  and to anyone whose images fail to load.
+- `browser_close` when done, and gitignore the tool's own output directory
+  (`.playwright-mcp/`) so traces and logs do not ship.
+
+Skip this step only if the project has no visual output at all.
+
+## 4. GitHub About section
 
 Set the repo's description, homepage, and topics via `gh`:
 
@@ -102,9 +128,9 @@ gh repo edit <owner/name> \
 
 Pick 3–6 accurate, lowercase topics from what the code actually is (e.g.
 `kanban`, `vanilla-js`, `single-file`, `static-site`, `project-management`).
-Also enable the Pages homepage link once step 4 gives you the URL.
+Also enable the Pages homepage link once step 5 gives you the URL.
 
-## 4. GitHub Pages via Actions
+## 5. GitHub Pages via Actions
 
 - If `.github/workflows/` already has a Pages workflow, read it and reuse it rather than
   adding a second one.
@@ -117,7 +143,7 @@ Also enable the Pages homepage link once step 4 gives you the URL.
 - Add an empty `.nojekyll` at the repo root so Jekyll doesn't eat files starting with `_`.
 - If the site is not at the repo root, point `upload-pages-artifact` at the right path.
 
-## 5. Commit and push
+## 6. Commit and push
 
 - Only after step 1 passes.
 - If on the default branch and the change is more than trivial, consider a branch + PR;
@@ -128,10 +154,10 @@ Also enable the Pages homepage link once step 4 gives you the URL.
 - Then watch the deployment: `gh run watch` (or `gh run list --limit 3`). If it fails,
   read the log with `gh run view --log-failed`, fix the cause, and push again.
 - Once deployed, get the URL with `gh api repos/<owner/name>/pages --jq .html_url`,
-  put it in the README (step 2) and the About homepage (step 3), and push that update.
+  put it in the README (step 2) and the About homepage (step 4), and push that update.
 
-## 6. Report back
+## 7. Report back
 
 Finish with a short summary: what the security scan covered and found, what changed in
-the README and About section, the live Pages URL, and anything you deliberately left
+the README and About section, the live Pages URL, the screenshot you captured, and anything you deliberately left
 undone or that needs the user's decision.

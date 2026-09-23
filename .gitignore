@@ -1,2 +1,5 @@
 # Local, machine-specific Claude Code settings (permission allowlists etc.)
 .claude/settings.local.json
+
+# Playwright MCP run artifacts (traces, console logs, page snapshots)
+.playwright-mcp/

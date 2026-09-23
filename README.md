@@ -6,6 +6,8 @@ markup, styles and behaviour — is one file: `index.html`.
 
 **Live demo:** https://chenxuefeng-code.github.io/kanban4/
 
+![The board in a browser: four columns — Backlog, In Progress, Blocked and Done — with the Add Task form on the left, a filter bar above, and colour-coded priority cards showing project, assignee and due date.](docs/screenshot.png)
+
 > This is a demo/training tool, not a product and not an official system. It is not
 > affiliated with, endorsed by, or representative of any real company or bank, and all
 > task data in it is invented.
