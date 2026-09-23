@@ -5,10 +5,8 @@ on:
     branches: [main]
   workflow_dispatch:
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
+# Least privilege: nothing by default; the deploy job asks only for what it needs.
+permissions: {}
 
 # Let a queued deploy finish rather than cancelling it mid-flight.
 concurrency:
@@ -18,23 +16,41 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
+      # Actions are pinned to full commit SHAs (tag in the comment) so a moved
+      # or compromised tag cannot change what runs in this workflow.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
 
-      # The app is a single static index.html at the repo root, so there is
-      # nothing to build — the repo is uploaded as-is.
+      # Refuse to deploy a page whose CSP hashes no longer match its inline
+      # script/style: the live site would load with a dead script.
+      - name: Verify CSP hashes
+        run: node tools/csp-hash.js --check
+
+      # Publish ONLY the app. The repo also holds CLAUDE.md, .claude/, tools/
+      # and editor config that have no business being on a public web server.
+      - name: Stage site
+        run: |
+          mkdir _site
+          cp index.html .nojekyll _site/
+
       # enablement turns Pages on (source: GitHub Actions) via the API on the
       # first run, so the repo needs no manual Settings change.
-      - uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
         with:
           enablement: true
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:
-          path: .
+          path: _site
 
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4

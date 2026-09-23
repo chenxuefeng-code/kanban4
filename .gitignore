@@ -3,3 +3,7 @@
 
 # Playwright MCP run artifacts (traces, console logs, page snapshots)
 .playwright-mcp/
+
+# Locally installed third-party Claude Code skills (not part of this project)
+.claude/skills/
+skills-lock.json
