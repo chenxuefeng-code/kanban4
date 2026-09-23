@@ -11,7 +11,7 @@
   (see CLAUDE.md, "Content Security Policy"). No inline event handlers and no
   style="" attributes are allowed anywhere in the markup.
 -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-kcfkqZk5BofFe7TkA6FJ0wCSFvgbJx4+HvtHBhrbT0Y='; style-src 'sha256-NKuiMPFmOqtgkRgsAGYbO8IGPWi5Ph7iDu6gN1FfZPQ='; connect-src https://formsubmit.co; img-src data:; base-uri 'none'; form-action 'none'; object-src 'none'; require-trusted-types-for 'script'; trusted-types kanban-html; upgrade-insecure-requests" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-+FlHqNKQYfVm4b9Kq1gPL0ZaVoTjJhd22eyAN3HFgfY='; style-src 'sha256-kNZNf9pB2wt2vNYMJXHoukFpqf9CMP4z3MiMkKVdEOo='; connect-src https://formsubmit.co; img-src data:; base-uri 'none'; form-action 'none'; object-src 'none'; require-trusted-types-for 'script'; trusted-types kanban-html; upgrade-insecure-requests" />
 <meta name="referrer" content="strict-origin" />
 <link rel="icon" href="data:," />
 <title>UOB IT PMO — Project Kanban</title>
@@ -562,7 +562,7 @@ h1, h2, h3, h4, h5 { font-family: var(--font-display); font-weight: 600; }
 .toast-region {
   position: fixed;
   right: var(--s-5);
-  bottom: var(--s-5);
+  bottom: 96px; /* clears the floating chat button */
   display: flex;
   flex-direction: column;
   gap: var(--s-2);
@@ -606,6 +606,43 @@ footer.app-footer {
 .support-dialog .hotline { font-size: 20px; font-weight: 700; color: var(--action); }
 .support-dialog .dialog-actions { display: flex; justify-content: flex-end; margin-top: var(--s-4); }
 
+/* Floating WhatsApp chat button + suggested-query dialog */
+.chat-fab {
+  position: fixed;
+  right: var(--s-5);
+  bottom: var(--s-5);
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-3) var(--s-4);
+  border: 0;
+  border-radius: 999px;
+  background: #0b7a4b;
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  font-size: 14px;
+  box-shadow: var(--shadow-lift);
+  cursor: pointer;
+}
+.chat-fab:hover { background: #086339; }
+.chat-fab svg { width: 24px; height: 24px; flex: none; }
+.chat-dialog { border-top-color: #0b7a4b; }
+.chat-queries { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s-2); }
+.chat-queries a {
+  display: block;
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 14px;
+}
+.chat-queries a:hover { background: var(--sky-100); border-color: #0b7a4b; }
+.chat-queries a.chat-open { color: #0b7a4b; font-weight: 700; }
+.chat-dialog .dialog-actions .btn { background: var(--surface); color: var(--ink); border-color: var(--line); }
+
 /* ============================================================
    10. RESPONSIVE & MOTION PREFERENCES
    ============================================================ */
@@ -621,6 +658,8 @@ footer.app-footer {
   .project-row { grid-template-columns: 1fr 76px; }
   .project-row .bar { grid-column: 1 / -1; grid-row: 2; }
   .toast-region { left: var(--s-4); right: var(--s-4); max-width: none; }
+  .chat-fab { right: var(--s-4); bottom: var(--s-4); }
+  .chat-fab-label { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .progress.is-intro .bar-seg { animation: none; }
@@ -861,6 +900,21 @@ footer.app-footer {
 <div class="toast-region" id="toastRegion" role="status" aria-live="polite" aria-atomic="false"></div>
 <div class="chart-tip" id="chartTip" hidden></div>
 
+<!-- Floating WhatsApp chat: opens #chatDialog (wireChatWidget) -->
+<button type="button" class="chat-fab" id="chatFab" aria-haspopup="dialog" aria-controls="chatDialog" aria-label="Chat with IT Support on WhatsApp">
+  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 11.9 11.9 0 0 0 4.6 4c1.7.7 2.4.8 3.2.7.5-.1 1.5-.6 1.8-1.2.2-.6.2-1.1.1-1.2l-.5-.2z"/></svg>
+  <span class="chat-fab-label">Chat with IT Support</span>
+</button>
+
+<dialog class="support-dialog chat-dialog" id="chatDialog" aria-labelledby="chatTitle" aria-describedby="chatBody">
+  <h2 id="chatTitle">IT Support on WhatsApp</h2>
+  <p id="chatBody">Pick a question to start a WhatsApp chat with it already typed, or open an empty chat. WhatsApp opens in a new tab.</p>
+  <ul class="chat-queries" id="chatQueries"></ul>
+  <div class="dialog-actions">
+    <button type="button" class="btn" id="chatClose">Close</button>
+  </div>
+</dialog>
+
 <!-- Support prompt: opened by wireSupportPrompt() after SUPPORT_PROMPT_DELAY_MS -->
 <dialog class="support-dialog" id="supportDialog" aria-labelledby="supportTitle" aria-describedby="supportBody">
   <h2 id="supportTitle">Thanks for visiting the IT PMO portal</h2>
@@ -927,13 +981,25 @@ const NOTIFY_TIMEOUT_MS      = 10000;
 /** How long a visitor stays before the IT Support prompt appears (once per load). */
 const SUPPORT_PROMPT_DELAY_MS = 10000;
 
+/** WhatsApp IT Support chat: international number, digits only, and suggested openers. */
+const WHATSAPP_NUMBER = "6512345678";
+const WHATSAPP_BASE   = "https://wa.me/";
+const CHAT_QUERIES = Object.freeze([
+  "I forgot my password or my account is locked",
+  "I can't connect to the VPN",
+  "I need software installed on my laptop",
+  "My laptop is running very slowly",
+  "I want to report a suspicious or phishing email",
+  "I need access to a shared drive or application"
+]);
+
 /* ============================================================
    STATE — single source of truth. Memory only, no storage APIs.
    ============================================================ */
 const state = {
   tasks: [],
   filters: { project: "", assignee: "", priority: "" },
-  ui: { openMoveMenuFor: null, confirmDeleteFor: null, draggingId: null },
+  ui: { openMoveMenuFor: null, confirmDeleteFor: null, draggingId: null, chatUsed: false },
   notify: { lastSentAt: 0, sent: 0 },
   idCounter: 0
 };
@@ -1730,8 +1796,49 @@ function wireSupportPrompt() {
   });
 
   window.setTimeout(function () {
-    if (!dialog.open) dialog.showModal();
+    // Skip if the visitor has already found the chat, or another dialog is up.
+    if (state.ui.chatUsed || document.querySelector("dialog[open]")) return;
+    dialog.showModal();
   }, SUPPORT_PROMPT_DELAY_MS);
+}
+
+/** WhatsApp link for a query; wa.me prefills the chat box with ?text=. */
+function whatsappLink(text) {
+  return WHATSAPP_BASE + WHATSAPP_NUMBER + (text ? "?text=" + encodeURIComponent(text) : "");
+}
+
+/** Floating chat button: opens a dialog of suggested IT Support queries. */
+function wireChatWidget() {
+  const fab = document.getElementById("chatFab");
+  const dialog = document.getElementById("chatDialog");
+  const list = document.getElementById("chatQueries");
+  if (typeof dialog.showModal !== "function") { fab.hidden = true; return; }
+
+  function addLink(label, text, className) {
+    const link = make("a", className, label);
+    link.href = whatsappLink(text);
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    const item = make("li");
+    item.append(link);
+    list.append(item);
+  }
+  CHAT_QUERIES.forEach(function (query) { addLink(query, query); });
+  addLink("Open an empty chat", "", "chat-open");
+
+  fab.addEventListener("click", function () {
+    state.ui.chatUsed = true;
+    const prompt = document.getElementById("supportDialog");
+    if (prompt.open) prompt.close();
+    dialog.showModal();
+  });
+  list.addEventListener("click", function (event) {
+    if (event.target.closest("a")) dialog.close();
+  });
+  document.getElementById("chatClose").addEventListener("click", function () {
+    dialog.close();
+  });
+  dialog.addEventListener("close", function () { fab.focus(); });
 }
 
 /* ============================================================
@@ -1767,6 +1874,7 @@ function init() {
   wireDragAndDrop();
   wireChartTooltip();
   wireSupportPrompt();
+  wireChatWidget();
 
   const progress = document.getElementById("progress");
   progress.classList.add("is-intro");

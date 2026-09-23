@@ -31,10 +31,12 @@ breaks the brief:
 - **Single file.** All markup, the `<style>` block, and the `<script>` block live in
   `index.html`. Do not split into separate `.css`/`.js` files.
 - **Zero external resources.** No CDN scripts, no web fonts, no image files. Icons are
-  inline SVG or Unicode glyphs; typography is a system font stack. The only outbound host
-  is FormSubmit: `grep -n "https://" index.html` should return exactly two hits, the
-  `FORMSUBMIT_ENDPOINT` constant and the CSP's `connect-src https://formsubmit.co`. Any
-  other hit means something was added that shouldn't be.
+  inline SVG or Unicode glyphs; typography is a system font stack. The only host the page
+  *connects* to is FormSubmit; the only other host is `wa.me`, which is a user-clicked
+  link (new tab), never fetched. `grep -n "https://" index.html` should return exactly
+  three hits: the CSP's `connect-src https://formsubmit.co`, the `FORMSUBMIT_ENDPOINT`
+  constant and the `WHATSAPP_BASE` constant. Any other hit means something was added
+  that shouldn't be.
 - **No persistence of any kind.** No `localStorage`, `sessionStorage`, IndexedDB, or
   cookies. A refresh resetting the board to seed data is intended behaviour and is called
   out in the UI. Do not "fix" this.
@@ -136,6 +138,20 @@ a warning toast. Never make card creation await the network. Never send the emai
 anywhere but this endpoint. `notifySkipReason()` rate-limits emails (`NOTIFY_COOLDOWN_MS`,
 `NOTIFY_MAX_PER_SESSION`), and the request omits credentials, refuses redirects and times
 out after `NOTIFY_TIMEOUT_MS`.
+
+### Support prompt and WhatsApp chat
+
+Two native `<dialog>`s, opened with `showModal()` (never `alert()`), with static markup
+next to the toast region:
+
+- `wireSupportPrompt()` shows the IT Support hotline once, `SUPPORT_PROMPT_DELAY_MS` after
+  load. It is skipped if the visitor has already opened the chat (`state.ui.chatUsed`) or
+  another dialog is open.
+- `wireChatWidget()` wires the floating `.chat-fab` button (bottom right; the toast region
+  sits above it) to a dialog listing `CHAT_QUERIES`. Each is a `wa.me` link to
+  `WHATSAPP_NUMBER` with the query as `?text=` (built with `encodeURIComponent`, rendered
+  with `make()`, opened with `target="_blank" rel="noopener noreferrer"`). Change the
+  number or queries only in those constants.
 
 ### Deployment
 
