@@ -11,7 +11,7 @@
   (see CLAUDE.md, "Content Security Policy"). No inline event handlers and no
   style="" attributes are allowed anywhere in the markup.
 -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-I7o/ZF7ikpwQCbgKKY8XhZF2KpuZMMMdKWV2f4ZD8So='; style-src 'sha256-EcVq65BEsgdogpMZaPDgg+NNUAaZN5vsPuhloRCa0QU='; connect-src https://formsubmit.co; img-src data:; base-uri 'none'; form-action 'none'; object-src 'none'; require-trusted-types-for 'script'; trusted-types kanban-html; upgrade-insecure-requests" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-kcfkqZk5BofFe7TkA6FJ0wCSFvgbJx4+HvtHBhrbT0Y='; style-src 'sha256-NKuiMPFmOqtgkRgsAGYbO8IGPWi5Ph7iDu6gN1FfZPQ='; connect-src https://formsubmit.co; img-src data:; base-uri 'none'; form-action 'none'; object-src 'none'; require-trusted-types-for 'script'; trusted-types kanban-html; upgrade-insecure-requests" />
 <meta name="referrer" content="strict-origin" />
 <link rel="icon" href="data:," />
 <title>UOB IT PMO — Project Kanban</title>
@@ -589,6 +589,23 @@ footer.app-footer {
 
 .framed-notice { padding: var(--s-6); font-size: 16px; }
 
+/* Support prompt: native modal dialog, shown once after a short visit */
+.support-dialog {
+  max-width: 400px;
+  padding: var(--s-5);
+  border: 1px solid var(--line);
+  border-top: 5px solid var(--action);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-lift);
+  background: var(--surface);
+  color: var(--ink);
+}
+.support-dialog::backdrop { background: rgba(10, 42, 67, .35); }
+.support-dialog h2 { margin: 0 0 var(--s-2); font-size: 18px; }
+.support-dialog p { margin: 0 0 var(--s-3); font-size: 14px; }
+.support-dialog .hotline { font-size: 20px; font-weight: 700; color: var(--action); }
+.support-dialog .dialog-actions { display: flex; justify-content: flex-end; margin-top: var(--s-4); }
+
 /* ============================================================
    10. RESPONSIVE & MOTION PREFERENCES
    ============================================================ */
@@ -844,6 +861,16 @@ footer.app-footer {
 <div class="toast-region" id="toastRegion" role="status" aria-live="polite" aria-atomic="false"></div>
 <div class="chart-tip" id="chartTip" hidden></div>
 
+<!-- Support prompt: opened by wireSupportPrompt() after SUPPORT_PROMPT_DELAY_MS -->
+<dialog class="support-dialog" id="supportDialog" aria-labelledby="supportTitle" aria-describedby="supportBody">
+  <h2 id="supportTitle">Thanks for visiting the IT PMO portal</h2>
+  <p id="supportBody">If you need further assistance, please call the IT Support hotline:</p>
+  <p><a class="hotline" href="tel:87654321">8765 4321</a></p>
+  <div class="dialog-actions">
+    <button type="button" class="btn" id="supportClose" autofocus>Got it</button>
+  </div>
+</dialog>
+
 <script>
 /* ============================================================
    CONFIG
@@ -896,6 +923,9 @@ const DUE_GROUPS = Object.freeze([
 const NOTIFY_COOLDOWN_MS     = 15000;
 const NOTIFY_MAX_PER_SESSION = 20;
 const NOTIFY_TIMEOUT_MS      = 10000;
+
+/** How long a visitor stays before the IT Support prompt appears (once per load). */
+const SUPPORT_PROMPT_DELAY_MS = 10000;
 
 /* ============================================================
    STATE — single source of truth. Memory only, no storage APIs.
@@ -1690,6 +1720,20 @@ function wireChartTooltip() {
   window.addEventListener("scroll", function () { tip.hidden = true; }, { passive: true });
 }
 
+/** One-time IT Support prompt after the visitor has stayed a while. */
+function wireSupportPrompt() {
+  const dialog = document.getElementById("supportDialog");
+  if (!dialog || typeof dialog.showModal !== "function") return;
+
+  document.getElementById("supportClose").addEventListener("click", function () {
+    dialog.close();
+  });
+
+  window.setTimeout(function () {
+    if (!dialog.open) dialog.showModal();
+  }, SUPPORT_PROMPT_DELAY_MS);
+}
+
 /* ============================================================
    INIT
    ============================================================ */
@@ -1722,6 +1766,7 @@ function init() {
   wireCardActions();
   wireDragAndDrop();
   wireChartTooltip();
+  wireSupportPrompt();
 
   const progress = document.getElementById("progress");
   progress.classList.add("is-intro");
